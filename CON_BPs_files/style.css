@@ -1,0 +1,33 @@
+.embed-responsive-16by9 {
+    margin-top: 2vw;
+    margin-bottom: 2vw;
+}
+
+.embed-responsive-item {
+    height: 640px;
+    border: 1;
+}
+.container {
+    width: 100%;
+}
+
+.embed-responsive-16by9 {
+    padding-bottom: 42%;
+}
+
+.separate {
+    background: #000e21;
+}
+
+.light {
+    background: #000e21;
+    height: 800px;
+}
+
+.title_BP {
+    color: #d7d7d9;
+}
+
+body {
+    background: #000e21;
+}
