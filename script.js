@@ -106,17 +106,42 @@ function main() {
                                             ),
                                             Promise.resolve(lines),
                                         ]).then(([codeText, lines]) => {
+                                            var childDiv = document.createElement("div");
                                             var pre =
                                                 document.createElement("pre");
+                                            pre.classList.add("border")
+                                            pre.classList.add("rounded-bottom")
+                                            pre.classList.add("code-block")
                                             var codeElement =
                                                 document.createElement("code");
                                             var code = codeText
                                                 .split("\n")
                                                 .slice(lines[0] - 1, lines[1])
                                                 .join("\n");
-                                        
+                                            
+                                                // TODO: Add codeblock title same as github
                                             pre.appendChild(codeElement);
-                                            div.appendChild(pre);
+
+                                            var headerDiv = document.createElement("div");
+                                            
+                                            var aref = document.createElement("a");
+                                            aref.href = link;
+                                            aref.innerHTML = path.join("/");
+                                            aref.style.fontSize = "80%";
+                                            
+                                            var p = document.createElement("h6");
+                                            p.innerHTML = `Lines ${lines[0]} to ${lines[1]}`;
+                                            p.style.fontSize = "80%";
+
+                                            headerDiv.appendChild(aref);
+                                            headerDiv.appendChild(p);
+                                            headerDiv.classList.add("code-block-header");
+                                            headerDiv.classList.add("border");
+                                            headerDiv.classList.add("rounded-top");
+
+                                            childDiv.appendChild(headerDiv);
+                                            childDiv.appendChild(pre);
+                                            div.appendChild(childDiv);
 
                                             var lang = () => {
                                                 switch (
@@ -131,8 +156,8 @@ function main() {
                                             CodeMirror(codeElement, {
                                                 value: code,
                                                 mode: lang(),
-                                                theme: "blackboard",
-                                                lineNumbers: false,
+                                                theme: "base16-dark",
+                                                lineNumbers: true,
                                                 readOnly: true,
                                             });
                                         });
