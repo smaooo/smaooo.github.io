@@ -118,7 +118,8 @@ async function fetchAndCreateCodeBlock(readmeData, char, repoData, div) {
     return ishttps[0].length;
 }
 
-function createHTMLTag(readmeData, char, div) {
+function createHTMLTag(readmeData, char, repoData, div) {
+    console.log(repoData)
     var latestTag = undefined;
     var block = readmeData.substring(char.index).match(/<.*?>/g)[0];
     if (block.includes("</")) {
@@ -129,9 +130,23 @@ function createHTMLTag(readmeData, char, div) {
 
         // TODO: if button add href to it and bootstrap classes
 
+        // TODO: if img add src to it
         tag = tag[0].replace(" ", "").replace("<", "").replace(">", "");
 
         latestTag = document.createElement(tag);
+        switch (tag) {
+            case "img":
+                var srcRaw = block.match(/(?<=src=").*?(?=">)/g)[0];
+                var src = `${repoData.media_file_url}/${repoData.user}/${repoData.repo}/${repoData.branch}/${srcRaw}`;
+                latestTag.src = src;
+                
+                latestTag.classList.add("repo-image");
+                latestTag.classList.add("border");
+                latestTag.classList.add("rounded");
+                break;
+            case "button":
+                break;
+        }
         div.appendChild(latestTag);
     }
     return { len: block.length, latestTag: latestTag };
@@ -176,7 +191,7 @@ async function main() {
                 break;
             }
             if (char.value == "<") {
-                var { len, latestTag } = createHTMLTag(readmeData, char, div);
+                var { len, latestTag } = createHTMLTag(readmeData, char, repo, div);
 
                 iter.goToIndex(char.index + len - 1);
                 continue;

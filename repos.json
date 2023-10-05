@@ -3,6 +3,10 @@
         "name": "I Itch As I Crave",
         "link": "https://github.com/smaooo/I_ITCH_AS_I_CRAVE",
         "readme_path": "https://raw.githubusercontent.com/smaooo/I_ITCH_AS_I_CRAVE/main/Readme.md",
-        "raw_file_url": "https://raw.githubusercontent.com/"
+        "raw_file_url": "https://raw.githubusercontent.com/",
+        "media_file_url": "https://media.githubusercontent.com/media",
+        "user": "smaooo",
+        "repo": "I_ITCH_AS_I_CRAVE",
+        "branch": "main"
     }
 }

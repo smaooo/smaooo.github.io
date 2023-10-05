@@ -6,3 +6,13 @@
     margin: 0vw 5vw -5vw 5vw;
     padding-left: 1vw;
 }
+
+.repo-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.repo-image {
+    width: 50%;
+    align-self: center;
+}
