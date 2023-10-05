@@ -172,6 +172,9 @@ async function main() {
 
         do {
             var char = iter.next();
+            if (char.done && char.value== undefined) {
+                break;
+            }
             if (char.value == "<") {
                 var { len, latestTag } = createHTMLTag(readmeData, char, div);
 
@@ -203,12 +206,10 @@ async function main() {
                 continue;
             } else if (latestTag) {
                 latestTag.innerHTML += char.value;
-            } else {
-                if (!latestTag) {
-                    latestTag = document.createElement("p");
-                    div.appendChild(latestTag);
-                    latestTag.innerHTML += char.value;
-                }
+            } else if (latestTag == undefined && char.value.match(/\S/g)){
+                latestTag = document.createElement("p");
+                div.appendChild(latestTag);
+                latestTag.innerHTML += char.value;
             }
         } while (char && !char.done);
     }
