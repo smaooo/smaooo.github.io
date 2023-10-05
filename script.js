@@ -20,7 +20,7 @@ function stringIterator(str, startIndex = 0) {
             }
         },
         prevItem: function () {
-            if (index > 0) {
+            if (index > 1) {
                 return { value: str[index - 2], done: false, index: index - 2 };
             } else {
                 return { done: true };
@@ -36,172 +36,180 @@ function stringIterator(str, startIndex = 0) {
     };
 }
 
-function main() {
+async function fetchAndCreateCodeBlock(readmeData, char, repoData, div) {
+    var ishttps = readmeData.substring(char.index).match(/https[^\n]*\n/g);
+    if (ishttps.length == 0) {
+        return 0;
+    }
+    var link = ishttps[0].replace("\n", "");
+    var rawLink = link.replace("https://", "");
+    var parts = rawLink.split("/");
+    var user = parts[1];
+    var repo = parts[2];
+    var hash = parts[4];
+    var path = parts.splice(5, parts.length - 1);
+    var fileRaw = path[path.length - 1].split("#");
+    path[path.length - 1] = fileRaw[0];
+
+    var lines = fileRaw[1].split("-").map((x) => parseInt(x.replace("L", "")));
+    var rawFileLink = `${
+        repoData.raw_file_url
+    }/${user}/${repo}/${hash}/${path.join("/")}`;
+
+    // Fetch code using fetch
+    const response = await fetch(rawFileLink);
+    const codeText = await response.text();
+
+    // Extract the desired lines of code
+    const code = codeText
+        .split("\n")
+        .slice(lines[0] - 1, lines[1])
+        .join("\n");
+
+    // Create HTML elements and append them to the div
+    const childDiv = document.createElement("div");
+    const pre = document.createElement("pre");
+    pre.classList.add("border");
+    pre.classList.add("rounded-bottom");
+    pre.classList.add("code-block");
+    const codeElement = document.createElement("code");
+
+    // TODO: Add code block title same as GitHub
+    pre.appendChild(codeElement);
+
+    const headerDiv = document.createElement("div");
+    const aref = document.createElement("a");
+    aref.href = link;
+    aref.innerHTML = path.join("/");
+    aref.style.fontSize = "80%";
+    const p = document.createElement("h6");
+    p.innerHTML = `Lines ${lines[0]} to ${lines[1]}`;
+    p.style.fontSize = "80%";
+
+    headerDiv.appendChild(aref);
+    headerDiv.appendChild(p);
+    headerDiv.classList.add("code-block-header");
+    headerDiv.classList.add("border");
+    headerDiv.classList.add("rounded-top");
+
+    childDiv.appendChild(headerDiv);
+    childDiv.appendChild(pre);
+    div.appendChild(childDiv);
+
+    // Determine the code block's language
+    const lang = () => {
+        switch (fileRaw[0].split(".")[1]) {
+            case "cs":
+                return "text/x-csharp";
+            default:
+                break;
+        }
+    };
+
+    // Initialize CodeMirror
+    CodeMirror(codeElement, {
+        value: code,
+        mode: lang(),
+        theme: "base16-dark",
+        lineNumbers: true,
+        readOnly: true,
+    });
+
+    return ishttps[0].length;
+}
+
+function createHTMLTag(readmeData, char, div) {
+    var latestTag = undefined;
+    var block = readmeData.substring(char.index).match(/<.*?>/g)[0];
+    if (block.includes("</")) {
+        latestTag = undefined;
+    } else {
+        var tag = block.match(/<[^\s]*?>/g);
+        tag ??= block.match(/([^<].*?)\s/g);
+
+        // TODO: if button add href to it and bootstrap classes
+
+        tag = tag[0].replace(" ", "").replace("<", "").replace(">", "");
+
+        latestTag = document.createElement(tag);
+        div.appendChild(latestTag);
+    }
+    return { len: block.length, latestTag: latestTag };
+}
+
+function createHeaderElement(readmeData, char, div) {
+    var headerLine = readmeData.substring(char.index).match(/#(.*?)\n/g)[0];
+
+    var headerCount = (headerLine.match(/#/g) || []).length;
+
+    var header = document.createElement("h" + headerCount);
+    header.textContent = headerLine.replace(/#/g, "");
+    div.appendChild(header);
+    return headerLine.length;
+}
+
+async function main() {
     const fileURL = new URL("./repos.json", window.location.href).href;
 
-    // Use fetch or other methods to read the file content
-    fetch(fileURL)
-        .then((response) => response.text())
-        .then((data) => {
-            var repos = JSON.parse(data);
-            for (const repoKey of Object.keys(repos)) {
-                var repo = repos[repoKey];
+    var reposResponse = await fetch(fileURL);
+    var repos = JSON.parse(await reposResponse.text());
 
-                var div = document.createElement("div");
-                div.classList.add("repo-container");
-                div.id = repoKey;
+    for (const repoKey of Object.keys(repos)) {
+        var repo = repos[repoKey];
 
-                fetch(repo.readme_path)
-                    .then((response) => {
-                        if (!response.ok) {
-                            throw new Error("Network response was not ok");
-                        }
-                        return response.text();
-                    })
-                    .then((data) => {
-                        (function (repoData) {
-                            var iter = stringIterator(data);
-                            var char;
+        var div = document.createElement("div");
+        div.classList.add("repo-container");
+        div.id = repoKey;
+        document.body.appendChild(div);
 
-                            while ((char = iter.next()) && !char.value.done) {
-                                if (
-                                    char.value == "h" &&
-                                    iter.prevItem().value == "\n"
-                                ) {
-                                    var ishttps = data
-                                        .substring(char.index)
-                                        .match(/https[^\n]*\n/g);
-                                    if (ishttps.length > 0) {
-                                        var link = ishttps[0].replace("\n", "");
-                                        var rawLink = link.replace(
-                                            "https://",
-                                            ""
-                                        );
-                                        var parts = rawLink.split("/");
-                                        var user = parts[1];
-                                        var repo = parts[2];
-                                        var hash = parts[4];
-                                        var path = parts.splice(
-                                            5,
-                                            parts.length - 1
-                                        );
-                                        var fileRaw =
-                                            path[path.length - 1].split("#");
-                                        path[path.length - 1] = fileRaw[0];
+        var readmeResponse = await fetch(repo.readme_path);
+        var readmeData = await readmeResponse.text();
 
-                                        var lines = fileRaw[1]
-                                            .split("-")
-                                            .map((x) =>
-                                                parseInt(x.replace("L", ""))
-                                            );
-                                        var rawFileLink = `${
-                                            repoData.raw_file_url
-                                        }/${user}/${repo}/${hash}/${path.join(
-                                            "/"
-                                        )}`;
+        var iter = stringIterator(readmeData);
+        var char;
 
-                                        Promise.all([
-                                            fetch(rawFileLink).then(
-                                                (response) => response.text()
-                                            ),
-                                            Promise.resolve(lines),
-                                        ]).then(([codeText, lines]) => {
-                                            var childDiv = document.createElement("div");
-                                            var pre =
-                                                document.createElement("pre");
-                                            pre.classList.add("border")
-                                            pre.classList.add("rounded-bottom")
-                                            pre.classList.add("code-block")
-                                            var codeElement =
-                                                document.createElement("code");
-                                            var code = codeText
-                                                .split("\n")
-                                                .slice(lines[0] - 1, lines[1])
-                                                .join("\n");
-                                            
-                                                // TODO: Add codeblock title same as github
-                                            pre.appendChild(codeElement);
+        var latestTag = undefined;
 
-                                            var headerDiv = document.createElement("div");
-                                            
-                                            var aref = document.createElement("a");
-                                            aref.href = link;
-                                            aref.innerHTML = path.join("/");
-                                            aref.style.fontSize = "80%";
-                                            
-                                            var p = document.createElement("h6");
-                                            p.innerHTML = `Lines ${lines[0]} to ${lines[1]}`;
-                                            p.style.fontSize = "80%";
+        do {
+            var char = iter.next();
+            if (char.value == "<") {
+                var { len, latestTag } = createHTMLTag(readmeData, char, div);
 
-                                            headerDiv.appendChild(aref);
-                                            headerDiv.appendChild(p);
-                                            headerDiv.classList.add("code-block-header");
-                                            headerDiv.classList.add("border");
-                                            headerDiv.classList.add("rounded-top");
+                iter.goToIndex(char.index + len - 1);
+                continue;
+            } else if (char.value == "h" && iter.prevItem().value == "\n") {
+                var len = await fetchAndCreateCodeBlock(
+                    readmeData,
+                    char,
+                    repo,
+                    div
+                );
+                if (len > 0) {
+                    iter.goToIndex(char.index + len - 1);
+                    continue;
+                }
+            } else if (
+                char.value == "#" &&
+                (() => {
+                    if (iter.prevItem().value == undefined) {
+                        return true;
+                    }
+                    return iter.prevItem().value.match(/[\s]/g) != null;
+                })()
+            ) {
+                var len = createHeaderElement(readmeData, char, div);
 
-                                            childDiv.appendChild(headerDiv);
-                                            childDiv.appendChild(pre);
-                                            div.appendChild(childDiv);
-
-                                            var lang = () => {
-                                                switch (
-                                                    fileRaw[0].split(".")[1]
-                                                ) {
-                                                    case "cs":
-                                                        return "text/x-csharp";
-                                                    default:
-                                                        break;
-                                                }
-                                            };
-                                            CodeMirror(codeElement, {
-                                                value: code,
-                                                mode: lang(),
-                                                theme: "base16-dark",
-                                                lineNumbers: true,
-                                                readOnly: true,
-                                            });
-                                        });
-
-                                        iter.goToIndex(
-                                            char.index + link.length
-                                        );
-                                        continue;
-                                    }
-                                } else if (char.value == "#") {
-                                    var idx = char.index;
-                                    var headerLine = data
-                                        .substring(idx)
-                                        .match(/#(.*?)\n/g)[0];
-
-                                    var headerCount = (
-                                        headerLine.match(/#/g) || []
-                                    ).length;
-
-                                    var header = document.createElement(
-                                        "h" + headerCount
-                                    );
-                                    header.textContent = headerLine.replace(
-                                        /#/g,
-                                        ""
-                                    );
-                                    div.appendChild(header);
-
-                                    iter.goToIndex(idx + headerLine.length);
-                                    continue;
-                                } else if (char.value == "<") {
-                                    var line = data
-                                        .substring(char.index)
-                                        .match(/<.*?>/g)[0];
-                                }
-                            }
-                        })(repo);
-                    })
-                    .catch((error) => {});
-
-                document.body.appendChild(div);
+                iter.goToIndex(char.index + len - 1);
+                continue;
+            } else if (latestTag) {
+                latestTag.innerHTML += char.value;
+            } else {
+                if (!latestTag) {
+                    latestTag = document.createElement("p");
+                    div.appendChild(latestTag);
+                    latestTag.innerHTML += char.value;
+                }
             }
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-        });
+        } while (char && !char.done);
+    }
 }
