@@ -16,3 +16,8 @@
     width: 50%;
     align-self: center;
 }
+
+.repo-external-button {
+    width: 10%;
+    margin-left: 1vw;
+}

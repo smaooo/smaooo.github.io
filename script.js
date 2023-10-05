@@ -119,7 +119,6 @@ async function fetchAndCreateCodeBlock(readmeData, char, repoData, div) {
 }
 
 function createHTMLTag(readmeData, char, repoData, div) {
-    console.log(repoData)
     var latestTag = undefined;
     var block = readmeData.substring(char.index).match(/<.*?>/g)[0];
     if (block.includes("</")) {
@@ -130,7 +129,6 @@ function createHTMLTag(readmeData, char, repoData, div) {
 
         // TODO: if button add href to it and bootstrap classes
 
-        // TODO: if img add src to it
         tag = tag[0].replace(" ", "").replace("<", "").replace(">", "");
 
         latestTag = document.createElement(tag);
@@ -145,6 +143,15 @@ function createHTMLTag(readmeData, char, repoData, div) {
                 latestTag.classList.add("rounded");
                 break;
             case "button":
+                var srcRaw = block.match(/(?<=onclick=").*?(?=">)/g)[0];
+                latestTag.onclick = () => {
+                    window.open(srcRaw, "_blank");
+                };
+                latestTag.classList.add("btn");
+                latestTag.classList.add("btn-secondary");
+                latestTag.classList.add("btn-sm");
+
+                latestTag.classList.add("repo-external-button");
                 break;
         }
         div.appendChild(latestTag);
