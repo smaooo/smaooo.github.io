@@ -43,9 +43,9 @@ function createCodeBlock(code, lang, div, headerData) {
     pre.classList.add("border");
     pre.classList.add("code-block");
     const codeElement = document.createElement("code");
-    
+
     pre.appendChild(codeElement);
-    
+
     if (headerData != undefined) {
         pre.classList.add("rounded-bottom");
         const headerDiv = document.createElement("div");
@@ -56,15 +56,15 @@ function createCodeBlock(code, lang, div, headerData) {
         const p = document.createElement("h6");
         p.innerHTML = `Lines ${headerData.lines[0]} to ${headerData.lines[1]}`;
         p.style.fontSize = "80%";
-    
+
         headerDiv.appendChild(aref);
         headerDiv.appendChild(p);
         headerDiv.classList.add("code-block-header");
         headerDiv.classList.add("border");
         headerDiv.classList.add("rounded-top");
-    
+
         childDiv.appendChild(headerDiv);
-    }else {
+    } else {
         pre.classList.add("rounded");
     }
 
@@ -79,7 +79,7 @@ function createCodeBlock(code, lang, div, headerData) {
         theme: "base16-dark",
         lineNumbers: true,
         indentWithTabs: true,
-        matchClosing: true,       
+        matchClosing: true,
         readOnly: true,
     });
 
@@ -90,14 +90,20 @@ function createCodeBlock(code, lang, div, headerData) {
             }
         });
     });
-
 }
 
 function getLineHeight(el) {
-    var temp = document.createElement(el.nodeName), ret;
-    temp.setAttribute("style", "margin:0; padding:0; "
-        + "font-family:" + (el.style.fontFamily || "inherit") + "; "
-        + "font-size:" + (el.style.fontSize || "inherit"));
+    var temp = document.createElement(el.nodeName),
+        ret;
+    temp.setAttribute(
+        "style",
+        "margin:0; padding:0; " +
+            "font-family:" +
+            (el.style.fontFamily || "inherit") +
+            "; " +
+            "font-size:" +
+            (el.style.fontSize || "inherit")
+    );
     temp.innerHTML = "A";
 
     el.parentNode.appendChild(temp);
@@ -149,7 +155,7 @@ async function fetchAndCreateCodeBlock(readmeData, char, repoData, div) {
     var headerData = {
         link: link,
         path: path,
-        lines: lines
+        lines: lines,
     };
 
     createCodeBlock(code, lang(), div, headerData);
@@ -158,42 +164,42 @@ async function fetchAndCreateCodeBlock(readmeData, char, repoData, div) {
 }
 
 function createHTMLTag(readmeData, char, repoData, div) {
-    var latestTag = undefined;
+    var tag = undefined;
     var block = readmeData.substring(char.index).match(/<.*?>/g)[0];
     if (block.includes("</")) {
-        latestTag = undefined;
+        tag = undefined;
     } else {
         var tag = block.match(/<[^\s]*?>/g);
         tag ??= block.match(/([^<].*?)\s/g);
 
         tag = tag[0].replace(" ", "").replace("<", "").replace(">", "");
 
-        latestTag = document.createElement(tag);
-        switch (tag) {
+        tag = document.createElement(tag);
+        switch (tag.tagName.toLowerCase()) {
             case "img":
                 var srcRaw = block.match(/(?<=src=").*?(?=">)/g)[0];
                 var src = `${repoData.media_file_url}/${repoData.user}/${repoData.repo}/${repoData.branch}/${srcRaw}`;
-                latestTag.src = src;
-                
-                latestTag.classList.add("repo-image");
-                latestTag.classList.add("border");
-                latestTag.classList.add("rounded");
+                tag.src = src;
+
+                tag.classList.add("repo-image");
+                tag.classList.add("border");
+                tag.classList.add("rounded");
                 break;
             case "button":
                 var srcRaw = block.match(/(?<=onclick=").*?(?=">)/g)[0];
-                latestTag.onclick = () => {
+                tag.onclick = () => {
                     window.open(srcRaw, "_blank");
                 };
-                latestTag.classList.add("btn");
-                latestTag.classList.add("btn-secondary");
-                latestTag.classList.add("btn-sm");
+                tag.classList.add("btn");
+                tag.classList.add("btn-secondary");
+                tag.classList.add("btn-sm");
 
-                latestTag.classList.add("repo-external-button");
+                tag.classList.add("repo-external-button");
                 break;
         }
-        div.appendChild(latestTag);
+        div.appendChild(tag);
     }
-    return { len: block.length, latestTag: latestTag };
+    return { len: block.length, tag: tag };
 }
 
 function createHeaderElement(readmeData, char, div) {
@@ -207,7 +213,7 @@ function createHeaderElement(readmeData, char, div) {
     return headerLine.length;
 }
 
-function createGithubCodeBlock(readmeData, char, div, latestTag) {
+function createGithubCodeBlock(readmeData, char, div, tag) {
     var block = readmeData.substring(char.index).match(/`{1,3}[^`]*`{1,3}/g)[0];
     var tildeCount = block.match(/`+(?=[^`])/g)[0].length;
 
@@ -219,12 +225,11 @@ function createGithubCodeBlock(readmeData, char, div, latestTag) {
             span.classList.add("border");
             span.classList.add("rounded");
             span.innerHTML = mono;
-            if (latestTag) {
-                latestTag.appendChild(span);
-            }
-            else {
+            if (tag) {
+                tag.appendChild(span);
+            } else {
                 div.appendChild(span);
-            }                        
+            }
             break;
         case 3:
             lang = () => {
@@ -236,8 +241,11 @@ function createGithubCodeBlock(readmeData, char, div, latestTag) {
                         break;
                 }
             };
-            var code = block.replace(/`{3}.*\n/g, "").replace(/`{3}/g, "").trim();
-            
+            var code = block
+                .replace(/`{3}.*\n/g, "")
+                .replace(/`{3}/g, "")
+                .trim();
+
             createCodeBlock(code, lang(), div);
             break;
         default:
@@ -245,7 +253,9 @@ function createGithubCodeBlock(readmeData, char, div, latestTag) {
     }
     return block.length;
 }
-
+function isNumeric(value) {
+    return /^-?\d+$/.test(value);
+}
 async function main() {
     const fileURL = new URL("./repos.json", window.location.href).href;
 
@@ -268,18 +278,21 @@ async function main() {
         var iter = stringIterator(readmeData);
         var char;
 
-        var latestTag = undefined;
-
+        var tags = [];
         do {
             var char = iter.next();
-            if (char.done && char.value== undefined) {
+            if (char.done && char.value == undefined) {
                 break;
             }
-            if (char.value == "<") {
-                var { len, latestTag } = createHTMLTag(readmeData, char, repo, div);
-
+            if (char.value == "<" && iter.nextItem().value != "/") {
+                var { len, tag } = createHTMLTag(readmeData, char, repo, div);
+                tags.push(tag);
                 iter.goToIndex(char.index + len - 1);
                 continue;
+            } else if (char.value == "<" && iter.nextItem().value == "/") {
+                var block = readmeData.substring(char.index).match(/<.*?>/g)[0];
+                tags.pop();
+                iter.goToIndex(char.index + block.length - 1);
             } else if (char.value == "h" && iter.prevItem().value == "\n") {
                 var len = await fetchAndCreateCodeBlock(
                     readmeData,
@@ -304,21 +317,67 @@ async function main() {
 
                 iter.goToIndex(char.index + len - 1);
                 continue;
-            }
-            else if (char.value == "`") {
-                var len = createGithubCodeBlock(readmeData, char, div, latestTag);
+            } else if (char.value == "`") {
+                var len = createGithubCodeBlock(
+                    readmeData,
+                    char,
+                    div,
+                    tags[tags.length - 1]
+                );
                 iter.goToIndex(char.index + len - 1);
                 continue;
+            }
+            else if (
+                isNumeric(char.value) &&
+                iter.prevItem().value == "\n" &&
+                iter.nextItem().value == "."
+            ) {
+                var orderedList = readmeData
+                    .substring(char.index)
+                    .match(/(?<=\s|)\d..*/g);
 
+                var list = orderedList[0];
+
+                if (char.value == 1) {
+                    var ol = document.createElement("ol");
+                    tags[tags.length - 1].appendChild(ol);
+                    tags.push(ol);
+                }
+                var li = document.createElement("li");
+                li.innerHTML = list.match(/(?<=\d.).*/g)[0];
+                tags[tags.length - 1].appendChild(li);
+
+                if (char.value != 1) {
+                    var items = readmeData
+                        .substring(char.index)
+                        .match(/\d(?=\.)/g);
+                    var last = -1;
+                    for (const item of items) {
+                        if (parseInt(item) > last) {
+                            last = item;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    if (parseInt(char.value) == last) {
+                        if (tags[tags.length - 1].tagName == "OL") {
+                            tags.pop();
+                        }
+                    }
+                }
+                iter.goToIndex(char.index + list.length - 1);
+                continue;
             }
-             else if (latestTag) {
-                latestTag.innerHTML += char.value;
-            } else if (latestTag == undefined && char.value.match(/\S/g)){
-                latestTag = document.createElement("p");
-                div.appendChild(latestTag);
-                latestTag.innerHTML += char.value;
+            // TODO: Handle unordered list
+            else if (tags.length > 0 && tags[tags.length - 1]) {
+                tags[tags.length - 1].innerHTML += char.value;
+            } else if (tags.length == 0 && char.value.match(/\S/g)) {
+                var tag = document.createElement("p");
+                div.appendChild(tag);
+                tag.innerHTML += char.value;
+                tags.push(tag);
             }
-            
         } while (char && !char.done);
     }
 }
