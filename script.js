@@ -253,8 +253,35 @@ function createGithubCodeBlock(readmeData, char, div, tag) {
     }
     return block.length;
 }
+
 function isNumeric(value) {
     return /^-?\d+$/.test(value);
+}
+
+const EMPTY_TAGS = ["IMG", "BUTTON"];
+const EMPTY_CLASSES = ["CodeMirror"]
+function clearEmptyElements(element) {
+    for (const child of element.childNodes) {
+        if (EMPTY_TAGS.some((x) => x == child.tagName)) {
+            continue;
+        }
+        if (child.classList) {
+
+            var classes = Array.from(child.classList);
+            if (classes && classes.length && EMPTY_CLASSES.some((x) => classes.map((c) => c.includes(x)))) {
+                continue;
+            }
+        }
+        if ((/\S/g).test(child.textContent) == false) {
+            console.log(child);
+            child.remove();
+        }
+        else {
+            clearEmptyElements(child);
+        }
+    }
+
+
 }
 async function main() {
     const fileURL = new URL("./repos.json", window.location.href).href;
@@ -379,5 +406,6 @@ async function main() {
                 tags.push(tag);
             }
         } while (char && !char.done);
+        clearEmptyElements(div);
     }
 }
