@@ -41,13 +41,13 @@ function createCodeBlock(code, lang, div, headerData) {
     const childDiv = document.createElement("div");
     const pre = document.createElement("pre");
     pre.classList.add("border");
-    pre.classList.add("rounded-bottom");
     pre.classList.add("code-block");
     const codeElement = document.createElement("code");
-
+    
     pre.appendChild(codeElement);
-
+    
     if (headerData != undefined) {
+        pre.classList.add("rounded-bottom");
         const headerDiv = document.createElement("div");
         const aref = document.createElement("a");
         aref.href = headerData.link;
@@ -64,21 +64,49 @@ function createCodeBlock(code, lang, div, headerData) {
         headerDiv.classList.add("rounded-top");
     
         childDiv.appendChild(headerDiv);
+    }else {
+        pre.classList.add("rounded");
     }
 
     childDiv.appendChild(pre);
     div.appendChild(childDiv);
 
+    var numLines = code.split("\n").length;
     // Initialize CodeMirror
     CodeMirror(codeElement, {
         value: code,
         mode: lang,
         theme: "base16-dark",
         lineNumbers: true,
+        indentWithTabs: true,
+        matchClosing: true,       
         readOnly: true,
     });
 
+    pre.childNodes.forEach((child) => {
+        child.childNodes.forEach((code) => {
+            if (code.classList.contains("CodeMirror")) {
+                code.style.height = `${getLineHeight(code) * (numLines + 1)}px`;
+            }
+        });
+    });
+
 }
+
+function getLineHeight(el) {
+    var temp = document.createElement(el.nodeName), ret;
+    temp.setAttribute("style", "margin:0; padding:0; "
+        + "font-family:" + (el.style.fontFamily || "inherit") + "; "
+        + "font-size:" + (el.style.fontSize || "inherit"));
+    temp.innerHTML = "A";
+
+    el.parentNode.appendChild(temp);
+    ret = temp.clientHeight;
+    temp.parentNode.removeChild(temp);
+
+    return ret;
+}
+
 async function fetchAndCreateCodeBlock(readmeData, char, repoData, div) {
     var ishttps = readmeData.substring(char.index).match(/https[^\n]*\n/g);
     if (ishttps.length == 0) {
@@ -179,8 +207,43 @@ function createHeaderElement(readmeData, char, div) {
     return headerLine.length;
 }
 
-function createGithubCodeBlock(readmeData, char, div) {
+function createGithubCodeBlock(readmeData, char, div, latestTag) {
+    var block = readmeData.substring(char.index).match(/`{1,3}[^`]*`{1,3}/g)[0];
+    var tildeCount = block.match(/`+(?=[^`])/g)[0].length;
 
+    switch (tildeCount) {
+        case 1:
+            var mono = block.replace(/`/g, "");
+            var span = document.createElement("span");
+            span.classList.add("mono");
+            span.classList.add("border");
+            span.classList.add("rounded");
+            span.innerHTML = mono;
+            if (latestTag) {
+                latestTag.appendChild(span);
+            }
+            else {
+                div.appendChild(span);
+            }                        
+            break;
+        case 3:
+            lang = () => {
+                var l = block.match(/(?<=`{3}).*(?=\s)/g)[0];
+                switch (l) {
+                    case "C#":
+                        return "text/x-csharp";
+                    default:
+                        break;
+                }
+            };
+            var code = block.replace(/`{3}.*\n/g, "").replace(/`{3}/g, "").trim();
+            
+            createCodeBlock(code, lang(), div);
+            break;
+        default:
+            break;
+    }
+    return block.length;
 }
 
 async function main() {
@@ -189,8 +252,6 @@ async function main() {
     var reposResponse = await fetch(fileURL);
     var repos = JSON.parse(await reposResponse.text());
 
-    // TODO: Handle git code with ```
-    // TODO: Handle monoscript text with ``
     // TODO: Handle lists (ordered and unordered)
     // TODO: Image in mobile is too small
     for (const repoKey of Object.keys(repos)) {
@@ -245,23 +306,8 @@ async function main() {
                 continue;
             }
             else if (char.value == "`") {
-                var block = readmeData.substring(char.index).match(/`{1,3}[^`]*`{1,3}/g)[0];
-                var tildeCount = block.match(/`+(?=[^`])/g)[0].length;
-
-                switch (tildeCount) {
-                    case 1:
-                        // TODO: Handle monoscript text with `
-                        break;
-                    case 3:
-                        // TODO: Remove newline at the end of the code block
-                        var lang = block.match(/(?<=`{3}).*(?=\s)/g)[0];
-                        var code = block.replace(/`{3}.*\n/g, "").replace(/`{3}/g, "");
-                        createCodeBlock(code, lang, div);
-                        break;
-                    default:
-                        break;
-                }
-                iter.goToIndex(char.index + block.length - 1);
+                var len = createGithubCodeBlock(readmeData, char, div, latestTag);
+                iter.goToIndex(char.index + len - 1);
                 continue;
 
             }
