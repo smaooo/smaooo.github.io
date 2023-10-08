@@ -2,6 +2,10 @@
     margin: 5vw;
 }
 
+.code-block.single-code-block {
+    margin-top: 1vh;
+    margin-bottom: 1vh;
+}
 .code-block-header {
     margin: 0vw 5vw -5vw 5vw;
     padding-left: 1vw;

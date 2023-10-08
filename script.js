@@ -66,6 +66,7 @@ function createCodeBlock(code, lang, div, headerData) {
         childDiv.appendChild(headerDiv);
     } else {
         pre.classList.add("rounded");
+        pre.classList.add("single-code-block");
     }
 
     childDiv.appendChild(pre);
@@ -259,29 +260,29 @@ function isNumeric(value) {
 }
 
 const EMPTY_TAGS = ["IMG", "BUTTON"];
-const EMPTY_CLASSES = ["CodeMirror"]
+const EMPTY_CLASSES = ["CodeMirror"];
 function clearEmptyElements(element) {
     for (const child of element.childNodes) {
         if (EMPTY_TAGS.some((x) => x == child.tagName)) {
             continue;
         }
         if (child.classList) {
-
             var classes = Array.from(child.classList);
-            if (classes && classes.length && EMPTY_CLASSES.some((x) => classes.map((c) => c.includes(x)))) {
+            if (
+                classes &&
+                classes.length &&
+                EMPTY_CLASSES.some((x) => classes.map((c) => c.includes(x)))
+            ) {
                 continue;
             }
         }
-        if ((/\S/g).test(child.textContent) == false) {
+        if (/\S/g.test(child.textContent) == false) {
             console.log(child);
             child.remove();
-        }
-        else {
+        } else {
             clearEmptyElements(child);
         }
     }
-
-
 }
 async function main() {
     const fileURL = new URL("./repos.json", window.location.href).href;
@@ -337,7 +338,7 @@ async function main() {
                     if (iter.prevItem().value == undefined) {
                         return true;
                     }
-                    return iter.prevItem().value.match(/[\s]/g) != null;
+                    return /[\s]/g.test(iter.prevItem().value);
                 })()
             ) {
                 var len = createHeaderElement(readmeData, char, div);
@@ -353,8 +354,7 @@ async function main() {
                 );
                 iter.goToIndex(char.index + len - 1);
                 continue;
-            }
-            else if (
+            } else if (
                 isNumeric(char.value) &&
                 iter.prevItem().value == "\n" &&
                 iter.nextItem().value == "."
@@ -399,7 +399,7 @@ async function main() {
             // TODO: Handle unordered list
             else if (tags.length > 0 && tags[tags.length - 1]) {
                 tags[tags.length - 1].innerHTML += char.value;
-            } else if (tags.length == 0 && char.value.match(/\S/g)) {
+            } else if (tags.length == 0 && /\S/g.test(char.value)) {
                 var tag = document.createElement("p");
                 div.appendChild(tag);
                 tag.innerHTML += char.value;
