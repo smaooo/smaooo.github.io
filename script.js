@@ -1,3 +1,5 @@
+// TODO: populate website navbar with project names, and change the page content based on the project selected
+
 document.addEventListener("DOMContentLoaded", main, false);
 
 function stringIterator(str, startIndex = 0) {
@@ -277,12 +279,127 @@ function clearEmptyElements(element) {
             }
         }
         if (/\S/g.test(child.textContent) == false) {
-            console.log(child);
             child.remove();
         } else {
             clearEmptyElements(child);
         }
     }
+}
+
+async function createPageFromRepo(repo, repoKey) {
+    var div = document.createElement("div");
+    div.classList.add("repo-container");
+    div.id = repoKey;
+    document.body.appendChild(div);
+
+    var readmeResponse = await fetch(repo.readme_path);
+    var readmeData = await readmeResponse.text();
+
+    var iter = stringIterator(readmeData);
+    var char;
+
+    var tags = [];
+    do {
+        var char = iter.next();
+        if (char.done && char.value == undefined) {
+            break;
+        }
+        if (char.value == "<" && iter.nextItem().value != "/") {
+            var { len, tag } = createHTMLTag(readmeData, char, repo, div);
+            tags.push(tag);
+            iter.goToIndex(char.index + len - 1);
+            continue;
+        } else if (char.value == "<" && iter.nextItem().value == "/") {
+            var block = readmeData.substring(char.index).match(/<.*?>/g)[0];
+            tags.pop();
+            iter.goToIndex(char.index + block.length - 1);
+        } else if (char.value == "h" && iter.prevItem().value == "\n") {
+            var len = await fetchAndCreateCodeBlock(
+                readmeData,
+                char,
+                repo,
+                div
+            );
+            if (len > 0) {
+                iter.goToIndex(char.index + len - 1);
+                continue;
+            }
+        } else if (
+            char.value == "#" &&
+            (() => {
+                if (iter.prevItem().value == undefined) {
+                    return true;
+                }
+                return /[\s]/g.test(iter.prevItem().value);
+            })()
+        ) {
+            var len = createHeaderElement(readmeData, char, div);
+
+            iter.goToIndex(char.index + len - 1);
+            continue;
+        } else if (char.value == "`") {
+            var len = createGithubCodeBlock(
+                readmeData,
+                char,
+                div,
+                tags[tags.length - 1]
+            );
+            iter.goToIndex(char.index + len - 1);
+            continue;
+        } else if (
+            isNumeric(char.value) &&
+            iter.prevItem().value == "\n" &&
+            iter.nextItem().value == "."
+        ) {
+            var orderedList = readmeData
+                .substring(char.index)
+                .match(/(?<=\s|)\d..*/g);
+
+            var list = orderedList[0];
+
+            if (char.value == 1) {
+                var ol = document.createElement("ol");
+                tags[tags.length - 1].appendChild(ol);
+                tags.push(ol);
+            }
+            var li = document.createElement("li");
+            li.innerHTML = list.match(/(?<=\d.).*/g)[0];
+            tags[tags.length - 1].appendChild(li);
+
+            if (char.value != 1) {
+                var items = readmeData
+                    .substring(char.index)
+                    .match(/\d(?=\.)/g);
+                var last = -1;
+                for (const item of items) {
+                    if (parseInt(item) > last) {
+                        last = item;
+                    } else {
+                        break;
+                    }
+                }
+
+                if (parseInt(char.value) == last) {
+                    if (tags[tags.length - 1].tagName == "OL") {
+                        tags.pop();
+                    }
+                }
+            }
+            iter.goToIndex(char.index + list.length - 1);
+            continue;
+        }
+        // TODO: Handle unordered list
+        else if (tags.length > 0 && tags[tags.length - 1]) {
+            tags[tags.length - 1].innerHTML += char.value;
+        } else if (tags.length == 0 && /\S/g.test(char.value)) {
+            var tag = document.createElement("p");
+            div.appendChild(tag);
+            tag.innerHTML += char.value;
+            tags.push(tag);
+        }
+    } while (char && !char.done);
+    clearEmptyElements(div);
+
 }
 async function main() {
     const fileURL = new URL("./repos.json", window.location.href).href;
@@ -290,122 +407,10 @@ async function main() {
     var reposResponse = await fetch(fileURL);
     var repos = JSON.parse(await reposResponse.text());
 
-    // TODO: Handle lists (ordered and unordered)
     // TODO: Image in mobile is too small
     for (const repoKey of Object.keys(repos)) {
         var repo = repos[repoKey];
-
-        var div = document.createElement("div");
-        div.classList.add("repo-container");
-        div.id = repoKey;
-        document.body.appendChild(div);
-
-        var readmeResponse = await fetch(repo.readme_path);
-        var readmeData = await readmeResponse.text();
-
-        var iter = stringIterator(readmeData);
-        var char;
-
-        var tags = [];
-        do {
-            var char = iter.next();
-            if (char.done && char.value == undefined) {
-                break;
-            }
-            if (char.value == "<" && iter.nextItem().value != "/") {
-                var { len, tag } = createHTMLTag(readmeData, char, repo, div);
-                tags.push(tag);
-                iter.goToIndex(char.index + len - 1);
-                continue;
-            } else if (char.value == "<" && iter.nextItem().value == "/") {
-                var block = readmeData.substring(char.index).match(/<.*?>/g)[0];
-                tags.pop();
-                iter.goToIndex(char.index + block.length - 1);
-            } else if (char.value == "h" && iter.prevItem().value == "\n") {
-                var len = await fetchAndCreateCodeBlock(
-                    readmeData,
-                    char,
-                    repo,
-                    div
-                );
-                if (len > 0) {
-                    iter.goToIndex(char.index + len - 1);
-                    continue;
-                }
-            } else if (
-                char.value == "#" &&
-                (() => {
-                    if (iter.prevItem().value == undefined) {
-                        return true;
-                    }
-                    return /[\s]/g.test(iter.prevItem().value);
-                })()
-            ) {
-                var len = createHeaderElement(readmeData, char, div);
-
-                iter.goToIndex(char.index + len - 1);
-                continue;
-            } else if (char.value == "`") {
-                var len = createGithubCodeBlock(
-                    readmeData,
-                    char,
-                    div,
-                    tags[tags.length - 1]
-                );
-                iter.goToIndex(char.index + len - 1);
-                continue;
-            } else if (
-                isNumeric(char.value) &&
-                iter.prevItem().value == "\n" &&
-                iter.nextItem().value == "."
-            ) {
-                var orderedList = readmeData
-                    .substring(char.index)
-                    .match(/(?<=\s|)\d..*/g);
-
-                var list = orderedList[0];
-
-                if (char.value == 1) {
-                    var ol = document.createElement("ol");
-                    tags[tags.length - 1].appendChild(ol);
-                    tags.push(ol);
-                }
-                var li = document.createElement("li");
-                li.innerHTML = list.match(/(?<=\d.).*/g)[0];
-                tags[tags.length - 1].appendChild(li);
-
-                if (char.value != 1) {
-                    var items = readmeData
-                        .substring(char.index)
-                        .match(/\d(?=\.)/g);
-                    var last = -1;
-                    for (const item of items) {
-                        if (parseInt(item) > last) {
-                            last = item;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    if (parseInt(char.value) == last) {
-                        if (tags[tags.length - 1].tagName == "OL") {
-                            tags.pop();
-                        }
-                    }
-                }
-                iter.goToIndex(char.index + list.length - 1);
-                continue;
-            }
-            // TODO: Handle unordered list
-            else if (tags.length > 0 && tags[tags.length - 1]) {
-                tags[tags.length - 1].innerHTML += char.value;
-            } else if (tags.length == 0 && /\S/g.test(char.value)) {
-                var tag = document.createElement("p");
-                div.appendChild(tag);
-                tag.innerHTML += char.value;
-                tags.push(tag);
-            }
-        } while (char && !char.done);
-        clearEmptyElements(div);
+        await createPageFromRepo(repo, repoKey);
+        
     }
 }
