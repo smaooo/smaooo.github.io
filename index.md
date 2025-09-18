@@ -43,30 +43,24 @@ import CardGrid from '/.vitepress/theme/components/CardGrid.vue'
 
 <CardGrid>
   <ProjectCard
-    href="/projects/cool-app"
-    imgSrc="/images/cool-app.svg"
+    href="./projects/lost-coordinates"
+    imgSrc="./assets/lostcoordinates/card.png"
     title="Lost Coordinates"
   />
   <ProjectCard
-    href="/projects/awesome-tool"
+    href="./projects/tg0013"
     imgSrc="./assets/tg0013/card.png"
     title="TG0013"
   />
   <ProjectCard
-    href="/projects/another-one"
+    href="/projects/xat"
     imgSrc="./assets/xat/card.jpg"
     title="Xat"
   />
 
   <ProjectCard
-    href="/projects/final-project"
+    href="/projects/lsystem"
     imgSrc="./assets/lsystem/card.png"
     title="L-System Blender Plugins"
-  />
-  
-  <ProjectCard
-    href="/projects/final-project"
-    imgSrc="/images/final.svg"
-    title="Unreal Engine Plugins"
   />
 </CardGrid>

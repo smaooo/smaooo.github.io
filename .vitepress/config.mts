@@ -8,6 +8,14 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
+      { text: 'Projects', 
+        items: [
+          { text: 'Lost Coordinates', link: '/projects/lost-coordinates' },
+          { text: 'TG0013', link: '/projects/tg0013' },
+          { text: 'Xat', link: '/projects/xat' },
+          { text: 'L-System', link: '/projects/l-system' },
+        ]
+       },
     ],
 
 
